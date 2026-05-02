@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
 import type { ProjectItem, ProjectStatus } from '../types/project'
 
-type ProjectFormState = {
+export type ProjectFormValues = {
   title: string
   description: string
   status: ProjectStatus | ''
   techStack: string[]
 }
 
-const defaultFormState: ProjectFormState = {
+export const defaultProjectFormValues: ProjectFormValues = {
   title: '',
   description: '',
   status: '',
@@ -20,7 +19,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 export function useProjectManager() {
   const [projects, setProjects] = useState<ProjectItem[]>([])
-  const [formState, setFormState] = useState<ProjectFormState>(defaultFormState)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -55,86 +53,10 @@ export function useProjectManager() {
   }, [])
 
   const resetForm = () => {
-    setFormState(defaultFormState)
     setEditingId(null)
   }
 
-  const updateField = <K extends keyof ProjectFormState>(field: K, value: ProjectFormState[K]) => {
-    setFormState((current) => ({ ...current, [field]: value }))
-  }
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const title = formState.title.trim()
-    const description = formState.description.trim()
-
-    if (!title || !description || !formState.status) {
-      return
-    }
-
-    try {
-      setErrorMessage('')
-
-      if (editingId != null && selectedProject) {
-        const response = await fetch(`${API_BASE_URL}/projects/${editingId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title,
-            description,
-            status: formState.status,
-            techStack: formState.techStack,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to update project.')
-        }
-
-        const updatedProject = (await response.json()) as ProjectItem
-
-        setProjects((current) =>
-          current.map((project) => (project.id === editingId ? updatedProject : project)),
-        )
-      } else {
-        const response = await fetch(`${API_BASE_URL}/projects`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title,
-            description,
-            status: formState.status,
-            techStack: formState.techStack,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error('Failed to create project.')
-        }
-
-        const newProject = (await response.json()) as ProjectItem
-        setProjects((current) => [newProject, ...current])
-      }
-
-      resetForm()
-    } catch (error) {
-      console.error(error)
-      setErrorMessage('Unable to save the project right now.')
-    }
-  }
-
   const startEditing = (project: ProjectItem) => {
-    setFormState({
-      title: project.title,
-      description: project.description,
-      status: project.status,
-      techStack: Array.isArray(project.techStack) ? project.techStack : [],
-    })
     setEditingId(project.id)
   }
 
@@ -161,15 +83,87 @@ export function useProjectManager() {
     }
   }
 
+  const initialValues = useMemo(() => {
+    if (!selectedProject) {
+      return defaultProjectFormValues
+    }
+
+    return {
+      title: selectedProject.title,
+      description: selectedProject.description,
+      status: selectedProject.status,
+      techStack: Array.isArray(selectedProject.techStack) ? selectedProject.techStack : [],
+    } satisfies ProjectFormValues
+  }, [selectedProject])
+
+  const saveProject = async (values: ProjectFormValues) => {
+    const title = values.title.trim()
+    const description = values.description.trim()
+
+    try {
+      setErrorMessage('')
+
+      if (editingId != null && selectedProject) {
+        const response = await fetch(`${API_BASE_URL}/projects/${editingId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title,
+            description,
+            status: values.status,
+            techStack: values.techStack,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to update project.')
+        }
+
+        const updatedProject = (await response.json()) as ProjectItem
+
+        setProjects((current) =>
+          current.map((project) => (project.id === editingId ? updatedProject : project)),
+        )
+      } else {
+        const response = await fetch(`${API_BASE_URL}/projects`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title,
+            description,
+            status: values.status,
+            techStack: values.techStack,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to create project.')
+        }
+
+        const newProject = (await response.json()) as ProjectItem
+        setProjects((current) => [newProject, ...current])
+      }
+
+      resetForm()
+    } catch (error) {
+      console.error(error)
+      setErrorMessage('Unable to save the project right now.')
+      throw error
+    }
+  }
+
   return {
     projects,
-    formState,
     editingId,
     isLoading,
     errorMessage,
     isEditing: editingId != null,
-    handleSubmit,
-    updateField,
+    initialValues,
+    saveProject,
     startEditing,
     deleteProject,
     resetForm,

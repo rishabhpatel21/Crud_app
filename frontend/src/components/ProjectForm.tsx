@@ -1,21 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { FormEvent, KeyboardEvent } from 'react'
+import type { KeyboardEvent } from 'react'
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
 import { Button } from 'react-magic-ui'
 import { LuPlus, LuX } from 'react-icons/lu'
 import type { ProjectStatus } from '../types/project'
 import { TECH_STACK_OPTIONS } from '../data/techStack'
+import type { ProjectFormValues } from '../hooks/useProjectManager'
 
 type ProjectFormProps = {
-  title: string
-  description: string
-  status: ProjectStatus | ''
-  techStack: string[]
+  initialValues: ProjectFormValues
   isEditing: boolean
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void
-  onTitleChange: (value: string) => void
-  onDescriptionChange: (value: string) => void
-  onStatusChange: (value: ProjectStatus | '') => void
-  onTechStackChange: (value: string[]) => void
+  onSubmit: (values: ProjectFormValues) => Promise<void> | void
   onCancel: () => void
 }
 
@@ -25,17 +21,17 @@ const statusOptions: Array<{ value: ProjectStatus; label: string }> = [
   { value: 'complete', label: 'COMPLETE' },
 ]
 
+const validationSchema = Yup.object({
+  title: Yup.string().trim().required('Title is required.'),
+  description: Yup.string().trim().required('Description is required.'),
+  status: Yup.mixed<ProjectStatus>().oneOf(['pending', 'in-progress', 'complete']).required(),
+  techStack: Yup.array().of(Yup.string().trim()).default([]),
+})
+
 export function ProjectForm({
-  title,
-  description,
-  status,
-  techStack,
+  initialValues,
   isEditing,
   onSubmit,
-  onTitleChange,
-  onDescriptionChange,
-  onStatusChange,
-  onTechStackChange,
   onCancel,
 }: ProjectFormProps) {
   const [isStatusOpen, setIsStatusOpen] = useState(false)
@@ -46,6 +42,21 @@ export function ProjectForm({
   const statusDropdownRef = useRef<HTMLDivElement | null>(null)
   const techMenuRef = useRef<HTMLDivElement | null>(null)
   const techDropdownRef = useRef<HTMLDivElement | null>(null)
+
+  const formik = useFormik<ProjectFormValues>({
+    initialValues,
+    enableReinitialize: true,
+    validationSchema,
+    validateOnBlur: true,
+    validateOnChange: false,
+    onSubmit: async (values, helpers) => {
+      await onSubmit(values)
+      helpers.resetForm()
+      setIsStatusOpen(false)
+      setIsTechOpen(false)
+      setTechQuery('')
+    },
+  })
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -100,11 +111,7 @@ export function ProjectForm({
   }, [isStatusOpen, isTechOpen])
 
   const selectedStatusLabel =
-    statusOptions.find((option) => option.value === status)?.label ?? 'Select an option'
-
-  const isFormValid = title.trim() !== '' && description.trim() !== '' && status !== ''
-  const isFormDirty =
-    title.trim() !== '' || description.trim() !== '' || status !== '' || techStack.length > 0
+    statusOptions.find((option) => option.value === formik.values.status)?.label ?? 'Select an option'
 
   const toggleTech = (key: string) => {
     const normalized = key.trim().toLowerCase()
@@ -112,12 +119,15 @@ export function ProjectForm({
       return
     }
 
-    if (techStack.includes(normalized)) {
-      onTechStackChange(techStack.filter((item) => item !== normalized))
+    if (formik.values.techStack.includes(normalized)) {
+      void formik.setFieldValue(
+        'techStack',
+        formik.values.techStack.filter((item) => item !== normalized),
+      )
       return
     }
 
-    onTechStackChange([...techStack, normalized])
+    void formik.setFieldValue('techStack', [...formik.values.techStack, normalized])
   }
 
   const handleStatusKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -131,8 +141,8 @@ export function ProjectForm({
     }
   }
 
-  const selectedTechLabel = techStack.length
-    ? `${techStack.length} selected`
+  const selectedTechLabel = formik.values.techStack.length
+    ? `${formik.values.techStack.length} selected`
     : 'Select tech stack'
 
   const filteredTechOptions = TECH_STACK_OPTIONS.filter(({ label, key }) => {
@@ -144,12 +154,14 @@ export function ProjectForm({
   })
 
   return (
-    <form onSubmit={onSubmit} className="project-form">
+    <form onSubmit={formik.handleSubmit} className="project-form">
       <label>
         Title
         <input
-          value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
+          name="title"
+          value={formik.values.title}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
           placeholder="Project title"
         />
       </label>
@@ -157,8 +169,10 @@ export function ProjectForm({
       <label>
         Description
         <textarea
-          value={description}
-          onChange={(event) => onDescriptionChange(event.target.value)}
+          name="description"
+          value={formik.values.description}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
           placeholder="Project description"
         />
       </label>
@@ -168,7 +182,7 @@ export function ProjectForm({
         <div className="select-field custom-select" ref={statusMenuRef}>
           <button
             type="button"
-            className={`status-select-trigger ${isStatusOpen ? 'open' : ''} ${status ? '' : 'placeholder'}`}
+            className={`status-select-trigger ${isStatusOpen ? 'open' : ''} ${formik.values.status ? '' : 'placeholder'}`}
             onClick={() => setIsStatusOpen((current) => !current)}
             onKeyDown={handleStatusKeyDown}
             aria-haspopup="listbox"
@@ -185,7 +199,7 @@ export function ProjectForm({
               aria-label="Project status"
             >
               {statusOptions.map((option) => {
-                const isSelected = option.value === status
+                const isSelected = option.value === formik.values.status
 
                 return (
                   <button
@@ -193,7 +207,7 @@ export function ProjectForm({
                     type="button"
                     className={`status-option ${isSelected ? 'selected' : ''}`}
                     onClick={() => {
-                      onStatusChange(option.value)
+                      void formik.setFieldValue('status', option.value)
                       setIsStatusOpen(false)
                     }}
                     role="option"
@@ -216,7 +230,7 @@ export function ProjectForm({
         <div className="select-field custom-select" ref={techMenuRef}>
           <button
             type="button"
-            className={`tech-select-trigger ${isTechOpen ? 'open' : ''} ${techStack.length ? '' : 'placeholder'}`}
+            className={`tech-select-trigger ${isTechOpen ? 'open' : ''} ${formik.values.techStack.length ? '' : 'placeholder'}`}
             onClick={() => {
               setIsTechOpen((current) => !current)
               setTechQuery('')
@@ -241,11 +255,11 @@ export function ProjectForm({
                   placeholder="Search tech..."
                   className="tech-search"
                 />
-                {techStack.length ? (
+                {formik.values.techStack.length ? (
                   <button
                     type="button"
                     className="tech-clear"
-                    onClick={() => onTechStackChange([])}
+                    onClick={() => void formik.setFieldValue('techStack', [])}
                   >
                     Clear
                   </button>
@@ -254,7 +268,7 @@ export function ProjectForm({
 
               <div className="tech-options-grid">
                 {filteredTechOptions.map(({ key, label, Icon }) => {
-                  const isSelected = techStack.includes(key)
+                  const isSelected = formik.values.techStack.includes(key)
 
                   return (
                     <button
@@ -283,7 +297,7 @@ export function ProjectForm({
           variant="positive"
           size="medium"
           enableLiquidAnimation
-          disabled={!isFormValid}
+          disabled={!formik.isValid || formik.isSubmitting}
         >
           <LuPlus className="icon" strokeWidth={2.5} />
           {isEditing ? 'Save changes' : 'Create project'}
@@ -294,8 +308,11 @@ export function ProjectForm({
           className="a-button a-button--default a-button-anime btn secondary btn-icon"
           variant="default"
           size="medium"
-          onClick={onCancel}
-          disabled={!isEditing && !isFormDirty}
+          onClick={() => {
+            formik.resetForm()
+            onCancel()
+          }}
+          disabled={!isEditing && !formik.dirty}
         >
           <LuX className="icon" strokeWidth={2.5} />
           {isEditing ? 'Cancel' : 'Clear'}

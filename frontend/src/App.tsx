@@ -86,12 +86,11 @@ function App() {
   const [isMounted, setIsMounted] = useState(false)
   const {
     projects,
-    formState,
     isEditing,
     isLoading,
     errorMessage,
-    handleSubmit,
-    updateField,
+    initialValues,
+    saveProject,
     startEditing,
     deleteProject,
     resetForm,
@@ -122,16 +121,9 @@ function App() {
             />
             <Suspense fallback={<FormSkeleton />}>
               <ProjectForm
-                title={formState.title}
-                description={formState.description}
-                status={formState.status}
-                techStack={formState.techStack}
+                initialValues={initialValues}
                 isEditing={isEditing}
-                onSubmit={handleSubmit}
-                onTitleChange={(value) => updateField('title', value)}
-                onDescriptionChange={(value) => updateField('description', value)}
-                onStatusChange={(value) => updateField('status', value)}
-                onTechStackChange={(value) => updateField('techStack', value)}
+                onSubmit={saveProject}
                 onCancel={resetForm}
               />
             </Suspense>
