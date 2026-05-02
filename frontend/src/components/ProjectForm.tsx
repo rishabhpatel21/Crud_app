@@ -39,14 +39,22 @@ export function ProjectForm({
   onCancel,
 }: ProjectFormProps) {
   const [isStatusOpen, setIsStatusOpen] = useState(false)
+  const [isTechOpen, setIsTechOpen] = useState(false)
+  const [techQuery, setTechQuery] = useState('')
   const [opensUpward, setOpensUpward] = useState(false)
   const statusMenuRef = useRef<HTMLDivElement | null>(null)
   const statusDropdownRef = useRef<HTMLDivElement | null>(null)
+  const techMenuRef = useRef<HTMLDivElement | null>(null)
+  const techDropdownRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       if (!statusMenuRef.current?.contains(event.target as Node)) {
         setIsStatusOpen(false)
+      }
+
+      if (!techMenuRef.current?.contains(event.target as Node)) {
+        setIsTechOpen(false)
       }
     }
 
@@ -58,14 +66,14 @@ export function ProjectForm({
   }, [])
 
   useLayoutEffect(() => {
-    if (!isStatusOpen) {
+    if (!isStatusOpen && !isTechOpen) {
       setOpensUpward(false)
       return
     }
 
     const updateDropdownDirection = () => {
-      const trigger = statusMenuRef.current
-      const dropdown = statusDropdownRef.current
+      const trigger = isTechOpen ? techMenuRef.current : statusMenuRef.current
+      const dropdown = isTechOpen ? techDropdownRef.current : statusDropdownRef.current
 
       if (!trigger || !dropdown) {
         return
@@ -89,12 +97,14 @@ export function ProjectForm({
       window.removeEventListener('resize', updateDropdownDirection)
       window.removeEventListener('scroll', updateDropdownDirection, true)
     }
-  }, [isStatusOpen])
+  }, [isStatusOpen, isTechOpen])
 
   const selectedStatusLabel =
     statusOptions.find((option) => option.value === status)?.label ?? 'Select an option'
 
   const isFormValid = title.trim() !== '' && description.trim() !== '' && status !== ''
+  const isFormDirty =
+    title.trim() !== '' || description.trim() !== '' || status !== '' || techStack.length > 0
 
   const toggleTech = (key: string) => {
     const normalized = key.trim().toLowerCase()
@@ -120,6 +130,18 @@ export function ProjectForm({
       setIsStatusOpen(false)
     }
   }
+
+  const selectedTechLabel = techStack.length
+    ? `${techStack.length} selected`
+    : 'Select tech stack'
+
+  const filteredTechOptions = TECH_STACK_OPTIONS.filter(({ label, key }) => {
+    const query = techQuery.trim().toLowerCase()
+    if (!query) {
+      return true
+    }
+    return label.toLowerCase().includes(query) || key.toLowerCase().includes(query)
+  })
 
   return (
     <form onSubmit={onSubmit} className="project-form">
@@ -191,23 +213,66 @@ export function ProjectForm({
 
       <label>
         Tech stack
-        <div className="tech-stack-options" role="group" aria-label="Tech stack">
-          {TECH_STACK_OPTIONS.map(({ key, label, Icon }) => {
-            const isSelected = techStack.includes(key)
+        <div className="select-field custom-select" ref={techMenuRef}>
+          <button
+            type="button"
+            className={`tech-select-trigger ${isTechOpen ? 'open' : ''} ${techStack.length ? '' : 'placeholder'}`}
+            onClick={() => {
+              setIsTechOpen((current) => !current)
+              setTechQuery('')
+            }}
+            aria-haspopup="listbox"
+            aria-expanded={isTechOpen}
+          >
+            <span>{selectedTechLabel}</span>
+          </button>
 
-            return (
-              <button
-                key={key}
-                type="button"
-                className={`tech-stack-option ${isSelected ? 'selected' : ''}`}
-                onClick={() => toggleTech(key)}
-                aria-pressed={isSelected}
-              >
-                <Icon className="tech-stack-option__icon" aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            )
-          })}
+          {isTechOpen ? (
+            <div
+              ref={techDropdownRef}
+              className={`tech-dropdown ${opensUpward ? 'open-upward' : ''}`}
+              role="listbox"
+              aria-label="Tech stack"
+            >
+              <div className="tech-dropdown__header">
+                <input
+                  value={techQuery}
+                  onChange={(event) => setTechQuery(event.target.value)}
+                  placeholder="Search tech..."
+                  className="tech-search"
+                />
+                {techStack.length ? (
+                  <button
+                    type="button"
+                    className="tech-clear"
+                    onClick={() => onTechStackChange([])}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="tech-options-grid">
+                {filteredTechOptions.map(({ key, label, Icon }) => {
+                  const isSelected = techStack.includes(key)
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`tech-option ${isSelected ? 'selected' : ''}`}
+                      onClick={() => toggleTech(key)}
+                      role="option"
+                      aria-selected={isSelected}
+                    >
+                      <Icon className="tech-option__icon" aria-hidden="true" />
+                      <span className="tech-option__label">{label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       </label>
 
@@ -224,18 +289,17 @@ export function ProjectForm({
           {isEditing ? 'Save changes' : 'Create project'}
         </Button>
 
-        {isEditing ? (
-          <Button
-            type="button"
-            className="a-button a-button--default a-button-anime btn secondary btn-icon"
-            variant="default"
-            size="medium"
-            onClick={onCancel}
-          >
+        <Button
+          type="button"
+          className="a-button a-button--default a-button-anime btn secondary btn-icon"
+          variant="default"
+          size="medium"
+          onClick={onCancel}
+          disabled={!isEditing && !isFormDirty}
+        >
           <LuX className="icon" strokeWidth={2.5} />
-            Cancel
-          </Button>
-        ) : null}
+          {isEditing ? 'Cancel' : 'Clear'}
+        </Button>
       </div>
     </form>
   )
