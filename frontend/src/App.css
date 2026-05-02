@@ -7,7 +7,6 @@
   border: 1px solid rgba(38, 70, 83, 0.12);
   border-radius: 42px;
   box-shadow: 0 40px 120px rgba(38, 70, 83, 0.14);
-  backdrop-filter: blur(20px);
   overflow: clip;
   opacity: 0;
   transform: translateY(24px);
@@ -125,7 +124,6 @@
   display: grid;
   gap: 4px;
   box-shadow: 0 4px 16px rgba(38, 70, 83, 0.07), inset 0 1px 0 rgba(255,255,255,0.9);
-  backdrop-filter: blur(8px);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -992,17 +990,14 @@
   width: min(100%, 860px);
   transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
   align-items: flex-start;
+  content-visibility: auto;
+  contain-intrinsic-size: 220px;
 }
 
 .project-card:hover {
   transform: translateY(-5px);
   border-color: rgba(233, 111, 81, 0.25);
   box-shadow: 0 30px 80px rgba(38, 70, 83, 0.14);
-}
-
-.project-card:has(.icon-button:hover),
-.project-card:has(.icon-button:focus-visible) {
-  transform: translateY(-2px);
 }
 
 .project-card-copy {
