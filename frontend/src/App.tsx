@@ -103,7 +103,8 @@ function App() {
 
   return (
     <main className={`app-shell ${isMounted ? 'mounted' : 'hidden'}`}>
-      <div className="app-scroll-content">
+      <div className="app-scroll-frame">
+        <div className="app-scroll-content">
         <Suspense fallback={<HeroSkeleton />}>
           <HeroSection
             total={projects.length}
@@ -124,11 +125,13 @@ function App() {
                 title={formState.title}
                 description={formState.description}
                 status={formState.status}
+                techStack={formState.techStack}
                 isEditing={isEditing}
                 onSubmit={handleSubmit}
                 onTitleChange={(value) => updateField('title', value)}
                 onDescriptionChange={(value) => updateField('description', value)}
                 onStatusChange={(value) => updateField('status', value)}
+                onTechStackChange={(value) => updateField('techStack', value)}
                 onCancel={resetForm}
               />
             </Suspense>
@@ -149,6 +152,7 @@ function App() {
           </article>
         </section>
       </div>
+        </div>
     </main>
   )
 }

@@ -5,4 +5,5 @@ export type ProjectItem = {
   title: string
   description: string
   status: ProjectStatus
+  techStack: string[]
 }

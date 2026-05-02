@@ -14,6 +14,10 @@ const projectSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    techStack: {
+      type: [String],
+      default: [],
+    },
     status: {
       type: String,
       enum: allowedStatuses,
@@ -35,4 +39,3 @@ projectSchema.set('toJSON', {
 })
 
 module.exports = mongoose.model('Project', projectSchema)
-

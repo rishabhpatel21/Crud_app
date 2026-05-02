@@ -1,18 +1,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { Button } from 'react-magic-ui'
-import { LuPlus, LuCheck, LuX } from 'react-icons/lu'
+import { LuPlus, LuX } from 'react-icons/lu'
 import type { ProjectStatus } from '../types/project'
+import { TECH_STACK_OPTIONS } from '../data/techStack'
 
 type ProjectFormProps = {
   title: string
   description: string
   status: ProjectStatus | ''
+  techStack: string[]
   isEditing: boolean
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onTitleChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onStatusChange: (value: ProjectStatus | '') => void
+  onTechStackChange: (value: string[]) => void
   onCancel: () => void
 }
 
@@ -26,11 +29,13 @@ export function ProjectForm({
   title,
   description,
   status,
+  techStack,
   isEditing,
   onSubmit,
   onTitleChange,
   onDescriptionChange,
   onStatusChange,
+  onTechStackChange,
   onCancel,
 }: ProjectFormProps) {
   const [isStatusOpen, setIsStatusOpen] = useState(false)
@@ -90,6 +95,20 @@ export function ProjectForm({
     statusOptions.find((option) => option.value === status)?.label ?? 'Select an option'
 
   const isFormValid = title.trim() !== '' && description.trim() !== '' && status !== ''
+
+  const toggleTech = (key: string) => {
+    const normalized = key.trim().toLowerCase()
+    if (!normalized) {
+      return
+    }
+
+    if (techStack.includes(normalized)) {
+      onTechStackChange(techStack.filter((item) => item !== normalized))
+      return
+    }
+
+    onTechStackChange([...techStack, normalized])
+  }
 
   const handleStatusKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
@@ -167,6 +186,28 @@ export function ProjectForm({
               })}
             </div>
           ) : null}
+        </div>
+      </label>
+
+      <label>
+        Tech stack
+        <div className="tech-stack-options" role="group" aria-label="Tech stack">
+          {TECH_STACK_OPTIONS.map(({ key, label, Icon }) => {
+            const isSelected = techStack.includes(key)
+
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`tech-stack-option ${isSelected ? 'selected' : ''}`}
+                onClick={() => toggleTech(key)}
+                aria-pressed={isSelected}
+              >
+                <Icon className="tech-stack-option__icon" aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            )
+          })}
         </div>
       </label>
 

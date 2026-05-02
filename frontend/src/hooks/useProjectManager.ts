@@ -6,12 +6,14 @@ type ProjectFormState = {
   title: string
   description: string
   status: ProjectStatus | ''
+  techStack: string[]
 }
 
 const defaultFormState: ProjectFormState = {
   title: '',
   description: '',
   status: '',
+  techStack: [],
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
@@ -84,6 +86,7 @@ export function useProjectManager() {
             title,
             description,
             status: formState.status,
+            techStack: formState.techStack,
           }),
         })
 
@@ -106,6 +109,7 @@ export function useProjectManager() {
             title,
             description,
             status: formState.status,
+            techStack: formState.techStack,
           }),
         })
 
@@ -129,6 +133,7 @@ export function useProjectManager() {
       title: project.title,
       description: project.description,
       status: project.status,
+      techStack: Array.isArray(project.techStack) ? project.techStack : [],
     })
     setEditingId(project.id)
   }

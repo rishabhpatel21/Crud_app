@@ -88,3 +88,4 @@ Project fields:
 - `title` (string, required)
 - `description` (string, required)
 - `status` (`pending` | `in-progress` | `complete`)
+- `techStack` (string[], optional, example: `["react","node","mongodb"]`)
